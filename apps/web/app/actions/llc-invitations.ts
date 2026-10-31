@@ -1,14 +1,13 @@
 "use server";
 
-import { versionsMatch } from "@/lib/legal-acceptance";
+import { checkAgreement, versionsMatch } from "@/lib/legal-acceptance";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { sendLLCInvitationEmail } from "@/lib/llc-invitation-email";
 import {
+  buildAgreementRedirect,
   canUserManageLLCInvitations,
-  isLlcInvitesPaused,
-  LLC_INVITE_OWNER_PAUSE_MESSAGE,
   getExistingProfileByEmail,
   normalizeInvitationEmail,
   parseInvitationEmails
@@ -43,7 +42,6 @@ export async function sendLLCInvitations(
   formData: FormData
 ): Promise<ActionState> {
   const { user } = await requireAuth("owner");
-  if (isLlcInvitesPaused()) return { success: false, error: LLC_INVITE_OWNER_PAUSE_MESSAGE };
 
   if (!checkRateLimit(`sendLLCInvitations:${user.id}`, 10, 60 * 60 * 1000).allowed) {
     return { success: false, error: "Too many invitation requests. Please try again later." };
@@ -71,10 +69,7 @@ export async function sendLLCInvitations(
 
   const context = await loadInviteManagementContext(accountId, user.id);
   if ("error" in context) {
-    return {
-      success: false,
-      error: context.error ?? "Unable to load this LLC account right now."
-    };
+    return { success: false, error: context.error ?? "Unable to load this LLC account right now." };
   }
 
   const admin = createAdminClient();
@@ -89,7 +84,7 @@ export async function sendLLCInvitations(
   }
 
   if (profileError) {
-    console.error("sendLLCInvitations profile lookup error:", profileError);
+    console.error("sendLLCInvitations profile lookup error:", { code: profileError?.code });
     return { success: false, error: "Unable to check existing members right now." };
   }
 
@@ -121,12 +116,12 @@ export async function sendLLCInvitations(
   }
 
   if (memberError) {
-    console.error("sendLLCInvitations member lookup error:", memberError);
+    console.error("sendLLCInvitations member lookup error:", { code: memberError?.code });
     return { success: false, error: "Unable to verify current LLC members right now." };
   }
 
   if (inviteError) {
-    console.error("sendLLCInvitations pending invite lookup error:", inviteError);
+    console.error("sendLLCInvitations pending invite lookup error:", { code: inviteError?.code });
     return { success: false, error: "Unable to verify pending LLC invitations right now." };
   }
 
@@ -173,12 +168,9 @@ export async function sendLLCInvitations(
       return { success: false, error: LLC_INVITATIONS_SCHEMA_ERROR };
     }
     if (insertError.code === "23505") {
-      return {
-        success: false,
-        error: "Some of those emails already have an open invite to this LLC."
-      };
+      return { success: false, error: "Some of those emails already have an open invite to this LLC." };
     }
-    console.error("sendLLCInvitations insert error:", insertError);
+    console.error("sendLLCInvitations insert error:", { code: insertError?.code });
     return { success: false, error: "Unable to create LLC invitations right now." };
   }
 
@@ -203,7 +195,7 @@ export async function sendLLCInvitations(
       .in("id", failed.map((result) => result.id));
 
     if (cancelError && !isMissingSchemaError(cancelError)) {
-      console.error("sendLLCInvitations cancel failed invite error:", cancelError);
+      console.error("sendLLCInvitations cancel failed invite error:", { code: cancelError?.code });
     }
   }
 
@@ -223,7 +215,6 @@ export async function resendLLCInvitation(
   formData: FormData
 ): Promise<ActionState> {
   const { user } = await requireAuth("owner");
-  if (isLlcInvitesPaused()) return { success: false, error: LLC_INVITE_OWNER_PAUSE_MESSAGE };
 
   if (!checkRateLimit(`resendLLCInvitation:${user.id}`, 20, 60 * 60 * 1000).allowed) {
     return { success: false, error: "Too many resend attempts. Please try again later." };
@@ -245,7 +236,7 @@ export async function resendLLCInvitation(
     if (isMissingSchemaError(error)) {
       return { success: false, error: LLC_INVITATIONS_SCHEMA_ERROR };
     }
-    console.error("resendLLCInvitation lookup error:", error);
+    console.error("resendLLCInvitation lookup error:", { code: error?.code });
     return { success: false, error: "Unable to load that invitation right now." };
   }
 
@@ -263,35 +254,31 @@ export async function resendLLCInvitation(
 
   const context = await loadInviteManagementContext(invitation.ownership_account_id, user.id);
   if ("error" in context) {
-    return {
-      success: false,
-      error: context.error ?? "Unable to load this LLC account right now."
-    };
+    return { success: false, error: context.error ?? "Unable to load this LLC account right now." };
   }
 
-  const delivered = await sendLLCInvitationEmail({
-    email: invitation.email,
-    llcName: context.account.display_name,
-    inviterName: context.inviterName,
-    acceptUrl: buildInviteUrl(invitation.token)
-  });
-
-  if (!delivered) {
-    return { success: false, error: "Unable to resend the invitation email right now." };
-  }
-
-  const { error: updateError } = await admin
+  const { data: rotated, error: updateError } = await admin
     .from("llc_invitations")
-    .update({ created_at: new Date().toISOString() })
-    .eq("id", invitation.id);
+    .update({ token: crypto.randomUUID(), created_at: new Date().toISOString() })
+    .eq("id", invitation.id)
+    .eq("status", "pending")
+    .select("token");
 
   if (updateError) {
     if (isMissingSchemaError(updateError)) {
       return { success: false, error: LLC_INVITATIONS_SCHEMA_ERROR };
     }
-    console.error("resendLLCInvitation update error:", updateError);
-    return { success: false, error: "Invitation emailed, but its expiry could not be reset." };
+    console.error("resendLLCInvitation update error:", { code: updateError.code });
+    return { success: false, error: "Unable to resend the invitation email right now." };
   }
+  if (!rotated?.length) return { success: false, error: "Only pending invitations can be resent." };
+  const delivered = await sendLLCInvitationEmail({
+    email: invitation.email,
+    llcName: context.account.display_name,
+    inviterName: context.inviterName,
+    acceptUrl: buildInviteUrl(rotated[0].token)
+  });
+  if (!delivered) return { success: false, error: "Unable to resend the invitation email right now." };
 
   revalidateLlcSurfaces();
   return { success: true, message: `Invitation resent to ${invitation.email}.` };
@@ -323,7 +310,7 @@ export async function cancelLLCInvitation(
     if (isMissingSchemaError(error)) {
       return { success: false, error: LLC_INVITATIONS_SCHEMA_ERROR };
     }
-    console.error("cancelLLCInvitation lookup error:", error);
+    console.error("cancelLLCInvitation lookup error:", { code: error?.code });
     return { success: false, error: "Unable to load that invitation right now." };
   }
 
@@ -339,18 +326,22 @@ export async function cancelLLCInvitation(
     return { success: false, error: "Only pending invitations can be cancelled." };
   }
 
-  const { error: updateError } = await admin
+  const { data: cancelled, error: updateError } = await admin
     .from("llc_invitations")
     .update({ status: "cancelled" })
-    .eq("id", invitation.id);
+    .eq("id", invitation.id)
+    .eq("status", "pending")
+    .select("id");
 
   if (updateError) {
     if (isMissingSchemaError(updateError)) {
       return { success: false, error: LLC_INVITATIONS_SCHEMA_ERROR };
     }
-    console.error("cancelLLCInvitation update error:", updateError);
+    console.error("cancelLLCInvitation update error:", { code: updateError?.code });
     return { success: false, error: "Unable to cancel that invitation right now." };
   }
+
+  if (!cancelled?.length) return { success: false, error: "Only pending invitations can be cancelled." };
 
   revalidateLlcSurfaces();
   return { success: true, message: `Invitation cancelled for ${invitation.email}.` };
@@ -359,19 +350,23 @@ export async function cancelLLCInvitation(
 export async function acceptLLCInvitation(token: string): Promise<ActionState> {
   const inviteResult = await resolveInvitationForAcceptance(token);
   if ("error" in inviteResult) {
-    return {
-      success: false,
-      error: inviteResult.error ?? "This invitation is no longer active."
-    };
+    return { success: false, error: inviteResult.error ?? "This invitation is no longer active." };
   }
 
   const supabase = createClient();
   const {
-    data: { user }
+    data: { user }, error: authError
   } = await supabase.auth.getUser();
 
-  if (!user?.id || !user.email) {
+  if (authError || !user?.id || !user.email) {
     return { success: false, error: "Sign in to accept this invitation." };
+  }
+
+  if (normalizeInvitationEmail(user.email) !== normalizeInvitationEmail(inviteResult.invitation.email)) {
+    return { success: false, error: "This invitation was sent to a different email address." };
+  }
+  if (await checkAgreement(supabase, user) === "required") {
+    return { success: false, error: "Please agree to the Terms first." };
   }
 
   const result = await finalizeInvitationAcceptance({
@@ -382,9 +377,7 @@ export async function acceptLLCInvitation(token: string): Promise<ActionState> {
     nickname: typeof user.user_metadata?.nickname === "string" ? user.user_metadata.nickname : null
   });
 
-  if (!result.success) {
-    return { success: false, error: result.error };
-  }
+  if (!result.success) return { success: false, error: result.error };
 
   revalidateLlcSurfaces();
   return { success: true, accountId: result.accountId };
@@ -403,13 +396,7 @@ export async function signInToJoinLLC(formData: FormData) {
 
   const inviteResult = await resolveInvitationForAcceptance(token);
   if ("error" in inviteResult) {
-    redirect(
-      buildJoinRedirect(
-        token,
-        "signin",
-        inviteResult.error ?? "This invitation is no longer active."
-      )
-    );
+    redirect(buildJoinRedirect(token, "signin", inviteResult.error ?? "This invitation is no longer active."));
   }
 
   const supabase = createClient();
@@ -417,6 +404,11 @@ export async function signInToJoinLLC(formData: FormData) {
   if (signInError || !data.user?.id || !data.user.email) {
     redirect(buildJoinRedirect(token, "signin", "Incorrect email or password."));
   }
+
+  if (normalizeInvitationEmail(data.user.email) !== normalizeInvitationEmail(inviteResult.invitation.email)) {
+    redirect(buildJoinRedirect(token, "signin", "This invitation was sent to a different email address."));
+  }
+  if (await checkAgreement(supabase, data.user) === "required") redirect(buildAgreementRedirect(token));
 
   const accepted = await finalizeInvitationAcceptance({
     token,
@@ -446,13 +438,7 @@ export async function createAccountToJoinLLC(formData: FormData) {
   }
   const inviteResult = await resolveInvitationForAcceptance(token);
   if ("error" in inviteResult) {
-    redirect(
-      buildJoinRedirect(
-        token,
-        "signup",
-        inviteResult.error ?? "This invitation is no longer active."
-      )
-    );
+    redirect(buildJoinRedirect(token, "signup", inviteResult.error ?? "This invitation is no longer active."));
   }
 
   const email = inviteResult.invitation.email;
@@ -478,32 +464,35 @@ export async function createAccountToJoinLLC(formData: FormData) {
   });
 
   if (createUserError || !createdUser.user?.id) {
-    console.error("createAccountToJoinLLC auth error:", createUserError);
+    console.error("createAccountToJoinLLC auth error:", { code: createUserError?.code });
     const errorMessage = createUserError?.message?.toLowerCase().includes("already")
       ? "An account already exists for this email. Sign in to continue."
       : "Unable to create your account right now.";
-    redirect(buildJoinRedirect(token, createUserError?.message?.toLowerCase().includes("already") ? "signin" : "signup", errorMessage));
+    const mode = createUserError?.message?.toLowerCase().includes("already") ? "signin" : "signup";
+    redirect(buildJoinRedirect(token, mode, errorMessage));
   }
 
   await recordLlcRegistrationAgreement(admin, createdUser.user.id, createdUser.user.email, email);
   const accepted = await finalizeInvitationAcceptance({
     token,
     profileId: createdUser.user.id,
-    email,
+    email: createdUser.user.email ?? "",
     fullName: `${firstName} ${lastName}`.trim(),
     nickname: getNickname(firstName)
   });
 
-  if (!accepted.success) {
+  if (!accepted.success && accepted.code !== "agreement_required") {
     redirect(buildJoinRedirect(token, "signup", accepted.error));
   }
 
   const supabase = createClient();
   const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
   if (signInError) {
-    console.error("createAccountToJoinLLC sign in error:", signInError);
+    console.error("createAccountToJoinLLC sign in error:", { code: signInError?.code });
     redirect(buildJoinRedirect(token, "signin", "Account created. Sign in to continue."));
   }
+
+  if (!accepted.success) redirect(buildAgreementRedirect(token));
 
   revalidateLlcSurfaces();
   redirect(`/owner?account=${encodeURIComponent(accepted.accountId)}`);

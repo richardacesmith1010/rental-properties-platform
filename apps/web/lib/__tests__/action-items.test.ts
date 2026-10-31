@@ -43,7 +43,6 @@ describe("action items", () => {
           ownershipAccountId: "account-1",
           invitedBy: "owner-1",
           email: "coowner@example.com",
-          token: "token-1",
           status: "pending",
           createdAt: "2026-03-20T12:00:00.000Z",
           acceptedAt: null

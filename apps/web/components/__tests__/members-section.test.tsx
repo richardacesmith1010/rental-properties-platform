@@ -79,7 +79,6 @@ describe("MembersSection", () => {
       ownershipAccountId: "account-1",
       invitedBy: "user-1",
       email: "brother@example.com",
-      token: "550e8400-e29b-41d4-a716-446655440020",
       status: "pending",
       createdAt: new Date().toISOString(),
       acceptedAt: null

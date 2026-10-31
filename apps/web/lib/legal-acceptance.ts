@@ -73,9 +73,10 @@ export async function recordLegalAcceptance(admin: SupabaseClient, input: {
   }
 }
 export async function agreeDestination(user: Pick<User, "id">, rawNext: unknown) {
+  const next = getSafeNextPath(rawNext);
+  if (next && typeof rawNext === "string" && /^\/join-llc\?token=[A-Za-z0-9-]{1,64}$/.test(rawNext)) return next;
   const state = await getAuthState(user.id);
   const destination = resolveAuthRoute({ hasSession: true, ...state });
-  const next = getSafeNextPath(rawNext);
   return state.role && destination === getRoleHomePath(state.role) && next && isNextAllowedForRole(next, state.role)
     ? next : destination;
 }

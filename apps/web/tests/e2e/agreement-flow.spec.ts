@@ -50,7 +50,7 @@ test("E2E-R1,A1,B1,C1,M1 recovery, API gate, Back bar, console and 375px layout"
   expect(before.status()).toBe(403);
   expect(await before.json()).toEqual({ error: "Please agree to the Terms first." });
   await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await expect(page.getByRole("alert")).toHaveText("Check the box to agree first.");
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText("Check the box to agree first.");
   await expect(page.getByLabel(boxLabel)).toBeFocused();
   await page.getByRole("button", { name: "Read the Terms", exact: true }).click();
   const sheet = page.getByRole("dialog", { name: "Terms of Service", exact: true });

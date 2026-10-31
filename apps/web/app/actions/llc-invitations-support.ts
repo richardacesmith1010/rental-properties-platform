@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   acceptLLCInvitationMembership,
-  isLlcInvitesPaused,
   getLLCInvitationContextByToken,
   type LLCInvitationContext,
   normalizeInvitationEmail
@@ -20,7 +19,7 @@ export type InvitationLookupResult =
 
 export type InvitationAcceptanceResult =
   | { success: true; accountId: string }
-  | { success: false; error: string };
+  | { success: false; error: string; code?: "agreement_required" };
 
 export type InviteManagementContextResult =
   | { account: { id: string; display_name: string }; inviterName: string }
@@ -82,12 +81,12 @@ export async function loadInviteManagementContext(
   }
 
   if (accountError) {
-    console.error("loadInviteManagementContext account error:", accountError);
+    console.error("loadInviteManagementContext account error:", { code: accountError?.code });
     return { error: "Unable to load this LLC account right now." } as const;
   }
 
   if (inviterError) {
-    console.error("loadInviteManagementContext inviter error:", inviterError);
+    console.error("loadInviteManagementContext inviter error:", { code: inviterError?.code });
     return { error: "Unable to load your profile right now." } as const;
   }
 
@@ -109,7 +108,6 @@ export function revalidateLlcSurfaces() {
 export async function resolveInvitationForAcceptance(
   token: string
 ): Promise<InvitationLookupResult> {
-  if (isLlcInvitesPaused()) return { error: "This invite is paused for a safety fix. Please try again in a few days." };
   const invitation = await getLLCInvitationContextByToken(token);
   if (!invitation) {
     return { error: "This invitation is invalid." } satisfies InvitationLookupResult;
@@ -155,7 +153,7 @@ export async function finalizeInvitationAcceptance(params: {
   });
 
   if (!result.success) {
-    return { success: false, error: result.error };
+    return { success: false, error: result.error, ...(result.code ? { code: result.code } : {}) };
   }
 
   return { success: true, accountId: result.accountId };

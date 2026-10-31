@@ -115,3 +115,29 @@ describe("legal evidence", () => {
     expect(await agreeDestination(user, "/tenant")).toEqual("/complete-profile");
   });
 });
+
+
+describe("LLC agreement return and cutoff", () => {
+  it.each(["owner", "manager", "tenant"])("T17 %s returns to a strict join link before onboarding", async role => {
+    mocks.state.mockResolvedValue({ hasProfile: true, onboardingComplete: false, role, needsPasswordSet: true });
+    for (const token of ["abc", "11111111-1111-4111-8111-111111111111"]) {
+      expect(await agreeDestination(user, `/join-llc?token=${token}`)).toEqual(`/join-llc?token=${token}`);
+    }
+  });
+  it.each([
+    "/join-llc?token=", "/join-llc", "/join-llc?token=a&token=b", "/join-llc?token=a&x=1", "/join-llc?token=a#f",
+    "/join-llcx?token=a", "/join-llc/x?token=a", "/%6Aoin-llc?token=a", "/join-llc%3Ftoken%3Da", "/join-llc\\?token=a",
+    "//evil.example/join-llc?token=a", "https://evil.example/join-llc?token=a", "/manager"
+  ])("T17 preserves the owner fallback for %s", async next => {
+    mocks.state.mockResolvedValue({ hasProfile: true, onboardingComplete: true, role: "owner", needsPasswordSet: false });
+    expect(await agreeDestination(user, next)).toEqual("/owner");
+  });
+  it("T21 inclusive cutoff, millisecond exemption and failed read", async () => {
+    const { client, query, from } = db(); query.select.mockResolvedValue({ data: [], error: null });
+    expect(await checkAgreement(client, { ...user, created_at: "2026-10-29T23:59:59.999Z" })).toEqual("exempt");
+    expect(from).not.toHaveBeenCalled();
+    expect(await checkAgreement(client, { ...user, created_at: "2026-10-30T00:00:00.000Z" })).toEqual("required");
+    query.select.mockResolvedValue({ data: null, error: { code: "failed" } });
+    await expect(checkAgreement(client, user)).rejects.toThrow("Unable to read agreement records.");
+  });
+});

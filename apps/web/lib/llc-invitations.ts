@@ -1,3 +1,4 @@
+import { LEGAL_DOCUMENTS } from "@/lib/legal-versions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isMissingSchemaError } from "@/lib/supabase-errors";
 import { canUserAdministerOwnershipAccount } from "@/lib/ownership";
@@ -12,7 +13,6 @@ export interface LLCInvitationDTO {
   ownershipAccountId: string;
   invitedBy: string;
   email: string;
-  token: string;
   status: LLCInvitationStatus;
   createdAt: string;
   acceptedAt: string | null;
@@ -39,6 +39,11 @@ export interface ParsedInvitationEmails {
 
 function unique(values: string[]) {
   return Array.from(new Set(values));
+}
+
+export function buildAgreementRedirect(token: string) {
+  const joinPath = `/join-llc?token=${encodeURIComponent(token)}`;
+  return `/agree?next=${encodeURIComponent(joinPath)}`;
 }
 
 export function normalizeInvitationEmail(value: string) {
@@ -91,12 +96,12 @@ export async function canUserManageLLCInvitations(userId: string, accountId: str
   }
 
   if (memberError) {
-    console.error("canUserManageLLCInvitations membership error:", memberError);
+    console.error("canUserManageLLCInvitations membership error:", { code: memberError?.code });
     return false;
   }
 
   if (accountError) {
-    console.error("canUserManageLLCInvitations account error:", accountError);
+    console.error("canUserManageLLCInvitations account error:", { code: accountError?.code });
     return false;
   }
 
@@ -119,14 +124,14 @@ export async function getPendingLLCInvitationsForAccount(
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("llc_invitations")
-    .select("id, ownership_account_id, invited_by, email, token, status, created_at, accepted_at")
+    .select("id, ownership_account_id, invited_by, email, status, created_at, accepted_at")
     .eq("ownership_account_id", accountId)
     .eq("status", "pending")
     .order("created_at", { ascending: false });
 
   if (error) {
     if (!isMissingSchemaError(error)) {
-      console.error("getPendingLLCInvitationsForAccount error:", error);
+      console.error("getPendingLLCInvitationsForAccount error:", { code: error?.code });
     }
     return [];
   }
@@ -136,7 +141,6 @@ export async function getPendingLLCInvitationsForAccount(
     ownershipAccountId: invitation.ownership_account_id,
     invitedBy: invitation.invited_by,
     email: invitation.email,
-    token: invitation.token,
     status: invitation.status as LLCInvitationStatus,
     createdAt: invitation.created_at,
     acceptedAt: invitation.accepted_at ?? null
@@ -158,7 +162,7 @@ export async function getLLCInvitationContextByToken(
 
   if (error) {
     if (!isMissingSchemaError(error)) {
-      console.error("getLLCInvitationContextByToken error:", error);
+      console.error("getLLCInvitationContextByToken error:", { code: error?.code });
     }
     return null;
   }
@@ -181,7 +185,7 @@ export async function getLLCInvitationContextByToken(
       .eq("status", "pending");
 
     if (expireError && !isMissingSchemaError(expireError)) {
-      console.error("getLLCInvitationContextByToken expire error:", expireError);
+      console.error("getLLCInvitationContextByToken expire error:", { code: expireError?.code });
     }
   }
 
@@ -234,7 +238,7 @@ export async function getExistingProfileByEmail(email: string): Promise<{
 
   if (error) {
     if (!isMissingSchemaError(error)) {
-      console.error("getExistingProfileByEmail error:", error);
+      console.error("getExistingProfileByEmail error:", { code: error?.code });
     }
     return null;
   }
@@ -260,69 +264,33 @@ export async function acceptLLCInvitationMembership(params: {
   nickname?: string | null;
 }) {
   const admin = createAdminClient();
-  const acceptedAt = new Date().toISOString();
   const normalizedEmail = normalizeInvitationEmail(params.email);
   const existingProfile = await getExistingProfileByEmail(normalizedEmail);
   const fullName = params.fullName?.trim() || existingProfile?.fullName || normalizedEmail.split("@")[0];
   const nickname = params.nickname?.trim() || fullName.split(/\s+/)[0] || normalizedEmail.split("@")[0];
 
-  const { error: profileError } = await admin.from("profiles").upsert(
-    {
-      id: params.profileId,
-      email: normalizedEmail,
-      full_name: fullName,
-      nickname,
-      role: "owner",
-      onboarding_completed_at: existingProfile?.onboardingCompletedAt ?? acceptedAt
-    },
-    { onConflict: "id" }
-  );
-
-  if (profileError) {
-    if (isMissingSchemaError(profileError)) {
+  const { data, error } = await admin.rpc("accept_llc_invitation", {
+    p_invitation_id: params.invitation.id,
+    p_invitation_token: params.invitation.token,
+    p_profile_id: params.profileId,
+    p_full_name: fullName,
+    p_nickname: nickname,
+    p_terms_version: LEGAL_DOCUMENTS.terms.current,
+    p_privacy_version: LEGAL_DOCUMENTS.privacy.current
+  });
+  if (error) {
+    if (isMissingSchemaError(error)) {
       return { success: false as const, error: "This feature requires a database update before invites can be accepted." };
     }
-    console.error("acceptLLCInvitationMembership profile error:", profileError);
-    return { success: false as const, error: "Unable to update the invited member profile." };
-  }
-
-  const { error: memberError } = await admin.from("ownership_account_members").upsert(
-    {
-      account_id: params.invitation.accountId,
-      profile_id: params.profileId,
-      member_role: "owner",
-      active: true,
-      can_receive_critical_alerts: true
-    },
-    { onConflict: "account_id,profile_id" }
-  );
-
-  if (memberError) {
-    if (isMissingSchemaError(memberError)) {
-      return { success: false as const, error: "This feature requires a database update before invites can be accepted." };
-    }
-    console.error("acceptLLCInvitationMembership member error:", memberError);
+    console.error("acceptLLCInvitationMembership rpc error", { code: error.code });
     return { success: false as const, error: "Unable to attach this member to the LLC." };
   }
-
-  const { error: invitationError } = await admin
-    .from("llc_invitations")
-    .update({ status: "accepted", accepted_at: acceptedAt })
-    .eq("id", params.invitation.id)
-    .in("status", ["pending", "accepted"]);
-
-  if (invitationError) {
-    if (isMissingSchemaError(invitationError)) {
-      return { success: false as const, error: "This feature requires a database update before invites can be accepted." };
-    }
-    console.error("acceptLLCInvitationMembership invitation error:", invitationError);
-    return { success: false as const, error: "Member added, but the invitation could not be marked accepted." };
+  if (data === "agreement_required") {
+    return { success: false as const, error: "Please agree to the Terms first.", code: "agreement_required" as const };
+  }
+  if (data !== "accepted") {
+    return { success: false as const, error: "This invitation is no longer active." };
   }
 
   return { success: true as const, accountId: params.invitation.accountId };
 }
-
-const LLC_INVITES_PAUSED = true;
-export const LLC_INVITE_OWNER_PAUSE_MESSAGE =
-  "Partner invites are paused for a safety fix. Please try again in a few days.";
-export function isLlcInvitesPaused() { return LLC_INVITES_PAUSED; }

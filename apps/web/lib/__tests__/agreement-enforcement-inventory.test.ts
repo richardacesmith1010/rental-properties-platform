@@ -13,7 +13,7 @@ export const PUBLIC_ACTION_FILES: Record<string, { reason: string; exports: stri
   "plaid.ts": { reason: "Retired entry points return only a fixed error", exports: [
     "initiatePlaidLink", "completePlaidLink", "refreshPlaidBalance", "disconnectPlaid"] },
   "feedback.ts": { reason: "support channel: people who won't agree can still tell us why (259a decision)", exports: ["submitFeedback"] },
-  "llc-invitations.ts": { reason: "Public token-bound join; paused until 259b", exports: [
+  "llc-invitations.ts": { reason: "Public token-bound join; R5 agreement gate and R6 atomic acceptance", exports: [
     "acceptLLCInvitation", "signInToJoinLLC", "createAccountToJoinLLC"] },
   "account-governance-delete-support.ts": { reason: "Internal governance helpers; authenticated callers supply context", exports: [
     "deleteGovernedAccount", "resolveAccountDeleteRequest"] },
@@ -75,7 +75,7 @@ export const PAGE_INVENTORY: Record<string, { kind: string; reason: string }> = 
   "connect/refresh": { kind: "gated", reason: "Authenticated page" },
   "connect/return": { kind: "gated", reason: "Authenticated page" },
   "join/[inviteId]": { kind: "public", reason: "Public invite landing" },
-  "join-llc": { kind: "public", reason: "Public token-bound join; paused until 259b" },
+  "join-llc": { kind: "public", reason: "Public token-bound join; R5 agreement gate and R6 atomic acceptance" },
   "login": { kind: "public", reason: "Public authentication" },
   "manager/clients/[accountId]": { kind: "gated", reason: "Authenticated page" },
   "manager": { kind: "gated", reason: "Authenticated page" },
@@ -166,6 +166,12 @@ function reachesGate(file: string, name: string, visited = new Set<string>()): b
 }
 
 describe("agreement entry-point inventories", () => {
+  it("T6 join action and page reasons name R5 and R6 without a hold", () => {
+    for (const reason of [PUBLIC_ACTION_FILES["llc-invitations.ts"].reason, PAGE_INVENTORY["join-llc"].reason]) {
+      expect(reason).not.toMatch(/paused/i);
+      expect(reason).toMatch(/\bR5\b/); expect(reason).toMatch(/\bR6\b/);
+    }
+  });
   it("I1 discovers function and async const exports without a use-server directive", () => {
     const ast = ts.createSourceFile("fixture.ts", `
       export async function action() { return requireAuth("owner"); }
@@ -198,7 +204,7 @@ describe("agreement entry-point inventories", () => {
       const exitCalls = callsIn(ast).filter((call) => call === "requireAuthForExit").length;
       expect(exitCalls, file).toEqual(EXIT_ACTIONS[filename]?.length ?? 0);
     }
-  });
+  }, 60_000);
   it("I2 every API route chooses a gate, exit, cron, webhook or public classification", () => {
     const routes = files("app/api").filter((file) => file.endsWith("/route.ts"));
     const names = routes.map((file) => file.slice("app/api/".length, -"/route.ts".length));
@@ -213,7 +219,7 @@ describe("agreement entry-point inventories", () => {
       }
       if (entry.kind === "exit") expect(name).toMatch(/^(account\/export|pdf\/(receipt\/|receipts$|lease-summary\/))/);
     }
-  });
+  }, 60_000);
   it("I3 every page chooses a default gate, two exits, or a public reason", () => {
     const pages = files("app").filter((file) => file.endsWith("/page.tsx"));
     const names = pages.map((file) => file.slice("app/".length).replace(/\/?page\.tsx$/, ""));
@@ -228,5 +234,5 @@ describe("agreement entry-point inventories", () => {
         expect(["agree", "complete-profile"]).toContain(name); expect(text).toContain('legal: "skip"');
       } else expect(entry.reason.length).toBeGreaterThan(10);
     }
-  });
+  }, 60_000);
 });

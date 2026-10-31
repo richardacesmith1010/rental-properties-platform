@@ -1,6 +1,7 @@
 import { LEGAL_DOCUMENTS } from "@/lib/legal-versions";
 import { LegalAgreementCheckbox } from "@/components/legal/legal-agreement-checkbox";
-import { isLlcInvitesPaused } from "@/lib/llc-invitations";
+import { checkAgreement } from "@/lib/legal-acceptance";
+import { buildAgreementRedirect } from "@/lib/llc-invitations";
 import Link from "next/link";
 import { ArrowRight, Building2, ShieldCheck, Users } from "lucide-react";
 import { redirect } from "next/navigation";
@@ -62,9 +63,6 @@ function InviteErrorState({
 }
 
 export default async function JoinLlcPage(props: JoinLlcPageProps) {
-  if (isLlcInvitesPaused()) return <main className="app-surface min-h-screen p-6 text-[var(--ink)]">
-    <p>This invite is paused for a safety fix. Please try again in a few days.</p>
-  </main>;
   const searchParams = await props.searchParams;
   const token = typeof searchParams?.token === "string" ? searchParams.token : "";
   if (!token) {
@@ -106,10 +104,10 @@ export default async function JoinLlcPage(props: JoinLlcPageProps) {
 
   const supabase = createClient();
   const {
-    data: { user }
+    data: { user }, error: authError
   } = await supabase.auth.getUser();
 
-  if (user?.id && user.email) {
+  if (!authError && user?.id && user.email) {
     if (normalizeInvitationEmail(user.email) !== normalizeInvitationEmail(invitation.email)) {
       return (
         <main className="app-surface flex min-h-screen items-center justify-center px-4 py-12">
@@ -136,6 +134,8 @@ export default async function JoinLlcPage(props: JoinLlcPageProps) {
         </main>
       );
     }
+
+    if (await checkAgreement(supabase, user) === "required") redirect(buildAgreementRedirect(token));
 
     const accepted = await acceptLLCInvitation(token);
     if (accepted?.success && accepted.accountId) {

@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const m = vi.hoisted(() => ({ createUser: vi.fn(), record: vi.fn(), finalize: vi.fn(), signIn: vi.fn() }));
 vi.mock("@/lib/llc-invitations", async (original) => ({ ...await original<typeof import("@/lib/llc-invitations")>(),
-  isLlcInvitesPaused: () => false, getExistingProfileByEmail: async () => null,
+  getExistingProfileByEmail: async () => null,
   getLLCInvitationContextByToken: async () => ({ email: "invite@example.com", status: "pending", isExpired: false }) }));
 vi.mock("@/app/actions/llc-invitations-support", async (original) => ({
   ...await original<typeof import("@/app/actions/llc-invitations-support")>(), finalizeInvitationAcceptance: m.finalize,
@@ -27,7 +27,7 @@ beforeEach(() => {
   m.record.mockResolvedValue({ ok: true }); m.finalize.mockResolvedValue({ success: true, accountId: "account" });
   m.signIn.mockResolvedValue({ error: null });
 });
-describe("LLC registration agreement with hold mocked off", () => {
+describe("LLC registration agreement form", () => {
   it("L1 schema rejects missing agreement and weak passwords with exact copy", () => {
     const unchecked = createLlcInvitationAccountSchema.safeParse({ ...input, agree: undefined });
     expect(unchecked.success).toBe(false);
@@ -47,10 +47,12 @@ describe("LLC registration agreement with hold mocked off", () => {
     expect(m.record.mock.calls[0][1]).toEqual({ profileId: "p", email: "invite@example.com", source: "llc_invite", client: "web" });
     expect(m.record.mock.invocationCallOrder[0]).toBeLessThan(m.finalize.mock.invocationCallOrder[0]);
   });
-  it("L4 record failure continues; the shared gate recovers the missing record", async () => {
+  it("L4 record failure signs in for agreement recovery", async () => {
     m.record.mockResolvedValue({ ok: false, code: "write_failed" });
-    await expect(createAccountToJoinLLC(form())).rejects.toMatchObject({ digest: expect.stringContaining("/owner?account=account") });
-    expect(m.finalize).toHaveBeenCalledTimes(1);
+    m.finalize.mockResolvedValue({ success: false, error: "Please agree to the Terms first.", code: "agreement_required" });
+    const destination = `/agree?next=${encodeURIComponent(`/join-llc?token=${input.token}`)}`;
+    await expect(createAccountToJoinLLC(form())).rejects.toMatchObject({ digest: expect.stringContaining(destination) });
+    expect(m.finalize).toHaveBeenCalledTimes(1); expect(m.signIn).toHaveBeenCalledTimes(1);
   });
   it("L4b acceptance failure retains the saved record and redirects to the existing error", async () => {
     m.finalize.mockResolvedValue({ success: false, error: "This invitation is no longer active." });
