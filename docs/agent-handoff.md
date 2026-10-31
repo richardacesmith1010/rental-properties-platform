@@ -2391,3 +2391,30 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   Dependabot 15 alerts (10 high) untriaged.
 - Chat rotated: session transcript 60 MB (> 50 MB, L-010) and topic changed → Stage 1 runs in a new session, starting
   with Sprint 259a (sign-up/invite "I agree" + Terms version record, L3).
+
+## 2026-10-30 — Sprint 259a in progress ("I agree" + agreement record, L3)
+- Started from the owner's new chat ("I agree" = go on 259a). The linked Stage 1 session had begun 259a in parallel;
+  per L-041 this chat drives it, Stage 1 handed over `docs/sprint259a-stage1-findings.md` (5 personas, verified).
+- **Owner:** aunt Grace (attorney) has all the research and approves; the "A lawyer is reviewing" line comes off.
+- **Design decisions (Claude, recorded):** new accounts (created from 2026-10-30) must agree before any signed-in
+  page, server action or API; older accounts are asked once, with notice, in the Terms rewrite. Sign-up moves to a
+  server action that records at the click. Each record: versions + SHA-256 of the frozen archive text (FK to
+  `legal_document_versions`), role snapshot, web/iPhone, keyed email hash (`LEGAL_RECORD_HMAC_KEY`, version 1),
+  commit. Rows outlive anonymization 10 years; audited purge; legal holds; profile hard-delete guard. Terms/Privacy
+  banners: "These terms are in effect now. We will tell you before we change them." / "This policy is …"; the
+  inaccurate "Domus does not hold your money." is deleted; no 18+ Terms line (rewrite, with notice). LLC invites are
+  paused in code until 259b (token readable by other LLC members; no live exposure today).
+- **Reviews:** risk review (plaintiff's lawyer, Apple, tenant advocate; effort max) + Stage 1's 5 personas. ChatGPT
+  GPT-6 · High: rev 1 REJECT → rev 2, 3, 4 APPROVE WITH CHANGES → rev 5 adopted (no spec blockers left). Picker
+  restored to 5.6 Medium.
+- **Migration applied live** (`20261105_sprint259a_legal_acceptances.sql`, sha256 ad230a2…): 36-check SQL test passes
+  rolled back, dry run and live (D1); `handle_new_user` still maps unknown roles to tenant (D4); capability check
+  25/25 incl. `legal_acceptances`. Commit `0b0de2b` (not pushed yet).
+- **Codex:** `gpt-6.1-sol` · high (trial 2 of 3), running in the background on packet rev 5.
+- **Owner action before deploy:** create `LEGAL_RECORD_HMAC_KEY` (the permission system blocks Claude from writing
+  secrets): one command, below the chat message of 2026-10-30. Then keep a copy in the password manager.
+- **Next after Codex:** review → publish migration with the archive hashes → gate → deploy → smoke → fresh-account
+  E2E (sign-up, recovery, tenant exits, API 403) → iPhone walk → screenshots archived → handoff + rescore.
+- **Rewrite sprint must:** give notice to older accounts, keep receipts/lease/export/autopay-off/landlord contact
+  reachable without agreeing, add the 18+ rule, name Ingle Homes LLC (with the Stripe switch), tenant carve-outs,
+  record retention in the Privacy Policy, Apple 1.2 content rules and 5.1.1(i) items.
