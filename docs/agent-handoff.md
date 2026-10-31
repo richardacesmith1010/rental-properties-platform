@@ -2446,3 +2446,17 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   "Contract formation" OK for new accounts → rescore → 259b code.
 - **Notes for the Terms rewrite:** `/payments/receipt/[chargeId]` is now gated (fine while only new accounts are);
   make it an exit before older accounts are asked. ChatGPT's picker restored to 5.6 Medium both times.
+
+## 2026-10-30 (late evening) — 259b rev 6 ready for ChatGPT round 4; nothing new deployed or applied
+- **Push guard:** `main` auto-deploys production (Vercel Git). A temporary local `.git/hooks/pre-push` blocks pushing
+  `main` with 259a (`4ac46f8`) until `LEGAL_RECORD_HMAC_KEY` is in `apps/web/.env.local`. Delete the hook once 259a ships.
+- **259b packet rev 6** (`docs/sprint259b-codex-prompt.md`): ChatGPT GPT-6 · High reviewed revs 3, 4 and 5 (all APPROVE
+  WITH CHANGES; every REQUIRED item folded in). Added: R5 agreement before a signed-in join (+ `/agree` return rule), R6
+  atomic single-use join through a new DB function bound to the current token, status-conditional cancel/resend, token
+  rotation on resend, R7 Sentry scrub (today an error on `/join-llc?token=…` can send the token to Sentry), writer
+  inventory. **Next:** paste rev 6 into the same ChatGPT chat (Domus project, "Security Review Assessment").
+- **Migration `20261108_sprint259b_accept_llc_invitation.sql` is NOT applied.** Rolled-back dry run passed every case
+  (`supabase/tests/sprint259b_accept_llc_invitation.sql`). After approval (D4): apply → run the SQL test alone →
+  create `supabase/tests/sprint259b_accept_concurrency_helper.sql` → `node supabase/tests/sprint259b_accept_concurrency.mjs 10`
+  → drop the helper → D5 → Codex `gpt-6.1-sol` · high.
+- **Owner step unchanged:** the `LEGAL_RECORD_HMAC_KEY` command, then 259a ships (release steps in the entry above).
