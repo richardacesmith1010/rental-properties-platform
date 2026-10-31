@@ -267,6 +267,8 @@ query of all properties (test owners excluded) showed real homes in Illinois (li
 Pennsylvania too. Both had no rules researched, so they were invisible to the "is it allowed?" checks.
 **Rule:** Compute states in use from `properties` joined to non-test owners (exclude only `richard.ace.smith+…`), grouped
 by `state`, and write the query next to the result. Re-run it in every rules watch and before every stage gate.
+**Update 2026-10-30:** also exclude `@demo.domus.com` seeds and the App Review demo accounts — the "real" Illinois
+home was the App Review demo. Bucket owners by email first (`docs/stage1-il-pa-rules-research.md` §0).
 
 #### L-040 | 2026-10-24 | RESEARCH — Quote the operative statute verbatim; summaries drop clauses
 **What happened:** The 10-24 research summarized C.R.S. 38-12-105 from secondary sources and missed (1)(j) — no late

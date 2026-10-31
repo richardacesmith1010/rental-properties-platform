@@ -13,7 +13,7 @@ before each gate. Current stage: **0 → family (own homes + family)**.
 - [ ] Vercel Pro; Sentry DPA accepted; backup claim true
 - [ ] Final product name chosen; domains registered
 - [ ] Rules map: no GAP rows in areas outside testers will use
-- [ ] Rules map rows researched for every state with a real home (today CO, SC, IL, PA)
+- [ ] Rules map rows researched for every state with a real home (today CO, SC, PA; IL holds only the App Review demo, researched anyway — PA rows await Claude's re-check)
 
 ## Gate 2 — App Store submission
 - [ ] Gate 1 complete
