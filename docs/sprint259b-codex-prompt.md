@@ -102,7 +102,9 @@ agreed to the Terms. Then turn LLC invites back on.
   `idx_llc_invitations_unique_pending` allows one pending invitation per account and email; `token` is a `uuid`.
 - **Database (Claude's; Codex must not edit).** `20261108_sprint259b_accept_llc_invitation.sql` (Appendix A) is
   **applied live (2026-10-30); D4 and D5 passed** (live SQL test; 30 forced-contention races; helper dropped; 0
-  fixtures; member writers = `accept_llc_invitation`, `handle_new_user`). The app may call it now. `accept_llc_invitation(p_invitation_id,
+  fixtures; functions that create or activate memberships = `accept_llc_invitation`, `handle_new_user`;
+  `account_wipe_apply` deletes them during an account wipe). The app may call it now. T19's writer set is corrected
+  in `docs/sprint259b-fix1-codex-prompt.md` (adds `connect.ts`, `account-wipe.ts`). `accept_llc_invitation(p_invitation_id,
   p_invitation_token, p_profile_id, p_full_name, p_nickname, p_terms_version, p_privacy_version) returns text`:
   `accepted` |
   `not_active` | `agreement_required`; service role only. Dry run 2026-10-30
