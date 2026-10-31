@@ -49,7 +49,7 @@ States with real users' homes (live data, 2026-10-30; owners bucketed by email, 
 | Email | CAN-SPAM 15 U.S.C. 7704 (address only in commercial email) | Transactional only | OK | Add PO box before any marketing | 2026-10-24 |
 | Retention | IRS record periods; C.R.S. 13-80-103.5 (6 years for rent debts) | 7 years financial, 7 years after lease end | OK | Add property-records rule | 2026-10-24 |
 
-## Pennsylvania (real home: Ardmore) — Stage 1 research, 2026-10-30, not yet re-checked by Claude
+## Pennsylvania (real home: Ardmore) — Stage 1 research, re-checked 2026-10-30 (corrections and additions below)
 Note: Ardmore straddles **Lower Merion Township (Montgomery Co.)** and **Haverford Township (Delaware Co.)**; the
 researcher geocoded a sample address, not the owner's (none was shared). Geocode the real address before using the
 local-license row.
@@ -78,6 +78,33 @@ Opened: [1951 Act](https://www.palegis.us/statutes/unconsolidated/law-informatio
 6. List vacancies, refer applicants, negotiate leases or manage homes; onboard paid PA managers without license attestation.
 7. Turn on automatic or daily-stacking late fees in PA.
 8. Prompt rent or lease changes on a Lower Merion unit with an open violation or after a tenant complaint.
+
+### Pennsylvania re-check (2026-10-30, Claude's research agent, official texts)
+Sources opened: the 1951 Landlord and Tenant Act, RELRA, PLCCA and UETA PDFs on palegis.us; Lower Merion and Haverford
+codes on ecode360 (read in a browser); the PA Attorney General release; HB 344 PN 3169 and HB 558 PN 3170 with House
+amendment A02832 (the enacted texts of Acts 64 and 67 were not yet posted). Statuses: Late fees, Notices, Rental fees,
+Leases & e-sign, Licensing and Local license **confirmed**; Deposits and Screening **corrected**.
+
+| Row | Correction or addition |
+| --- | --- |
+| Deposits | The 30-day clock runs from lease end, or surrender and acceptance, "whichever first occurs" (§512(a)). A missing list forfeits withholding and suits only "for damages to the leasehold premises"; unpaid rent or another breach can still be withheld. A bond may replace escrow (§511.3). The landlord's 1% is 1% a year of the deposit, "in lieu of all other administrative and custodial expenses"; interest is paid on the lease-start anniversary. |
+| Late fees | The AG release says the order "does not resolve or end the lawsuit" (trial-level, not final). |
+| Notices | Lower Merion §75-4: while a violation notice is open, no lease may be ended (except for nonpayment, waste or disturbance) and no new tenant given possession; fine up to $600 per offense (§75-6). |
+| Rental fees & payment | Parking remedy: the landlord pays the tenant's parking costs for the lease term (§207(c)). Acts 64 and 67 both add a "Section 207" — cite them by Act number. |
+| Screening | The $20 cap was struck by House committee amendment A02832 (with the background-check-only rule); the Senate fiscal note doesn't mention it. HB 1492 was "laid on the table" 2026-03-25 (not dead). FCRA adverse action also needs the statement that the agency "did not make the decision" and the 60-day free copy. Both townships also protect "gender expression". |
+| Leases & e-sign | UETA §901's acknowledgment must say which parts are electronic and how. PLCCA §8: good-faith defense, a violation doesn't void the lease, 4-year limit; AG preapproval is optional. |
+| Licensing | A broker also "aids any person in locating or obtaining" a lease — watch any tenant-matching feature; the promotion prong excludes businesses whose "main business is that of advertising"; civil penalty up to $1,000 (§305); unlicensed managers can't sue for fees (§302). |
+| Local license — Ardmore | Lower Merion maintenance contacts must live within 10 miles (§75-17(A)(1)(e)). Haverford: $50 inspection per new occupancy; business license and privilege tax; smoke and CO alarms and fire extinguishers (§104-13). |
+
+New Pennsylvania rules the rows missed (status GAP unless noted; Domus has no feature for most yet):
+- **Abandoned property (1951 Act §505.1):** mail the statutory notice first-class to the unit and any forwarding address;
+  10 days from the postmark; storage up to 30 days on request; treble damages plus fees.
+- **Death of a sole tenant (§514):** the executor may end the lease on "fourteen days' written notice" with no penalty.
+- **Tenant associations (§205):** no lease may be "terminated or nonrenewed" for joining one.
+- **State fair housing (PHRA §5(h), Act 222 of 1955; 16 Pa. Code §41.206):** covers age (40+) and familial status;
+  §5(h)(6) bans application "questions or entries concerning" protected traits — review date-of-birth and household
+  fields; "sex" includes sexual orientation and gender identity statewide.
+- **Eviction cure (§503(c)):** in rent-only cases, paying the arrears and costs before the writ is carried out stops it.
 
 ## Illinois (App Review demo home only) — Stage 1 research, 2026-10-30; payment rows checked against ILGA text
 
