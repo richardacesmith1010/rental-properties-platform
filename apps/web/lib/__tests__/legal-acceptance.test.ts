@@ -7,6 +7,7 @@ vi.mock("@/lib/auth", () => ({ getAuthState: mocks.state, getRoleHomePath: (role
 vi.mock("@/lib/native-app-server", () => ({ isNativeAppServer: mocks.native }));
 import { agreementClient, agreementRequired, agreeDestination, checkAgreement, legalStatus,
   recordLegalAcceptance, versionsMatch, agreementApiResponse } from "@/lib/legal-acceptance";
+import { recordLlcRegistrationAgreement } from "@/app/actions/llc-invitations-support";
 import { LEGAL_DOCUMENTS } from "@/lib/legal-versions";
 
 function db() {
@@ -17,7 +18,7 @@ function db() {
   const from = vi.fn(() => query);
   return { from, query, client: { from } as unknown as SupabaseClient };
 }
-const current = { profile_id: "p", terms_version: "2026-10-30", privacy_version: "2026-10-30" };
+const current = { role_at_acceptance: "tenant", profile_id: "p", terms_version: "2026-10-30", privacy_version: "2026-10-30" };
 const user = { id: "p", created_at: "2026-10-30T12:00:00Z" } as User;
 beforeEach(() => {
   vi.clearAllMocks(); vi.stubEnv("LEGAL_RECORD_HMAC_KEY", "test-key"); vi.stubEnv("VERCEL_GIT_COMMIT_SHA", "abcdef0");
@@ -51,9 +52,12 @@ describe("legal evidence", () => {
     expect(await agreementApiResponse(client, { ...user, created_at: "2026-01-01" })).toBeNull();
   });
   it("S3,S10,S15,V3 exact immutable payload snapshots profile role and trusted email HMAC", async () => {
-    const { client, query } = db();
+    const { client, query, from } = db();
     expect(await recordLegalAcceptance(client, { profileId: "p", email: " Person@Example.com ",
       source: "sign_up", client: "web" })).toEqual({ ok: true });
+    expect(from.mock.calls).toEqual([["profiles"], ["legal_acceptances"]]);
+    expect(query.select.mock.calls).toEqual([["role"]]);
+    expect(query.eq.mock.calls).toEqual([["id", "p"]]);
     expect(query.upsert.mock.calls).toEqual([[{
       profile_id: "p", terms_version: "2026-10-30", privacy_version: "2026-10-30",
       terms_sha256: LEGAL_DOCUMENTS.terms.versions["2026-10-30"],
@@ -71,6 +75,31 @@ describe("legal evidence", () => {
     expect(await recordLegalAcceptance(client, { profileId: "p", email: code === "no_email" ? "" : "a@example.com",
       source: "invite", client: "web" })).toEqual({ ok: false, code });
     expect(log).toHaveBeenCalledWith("[legal] acceptance not saved", { source: "invite", code }); log.mockRestore();
+  });
+  it.each([
+    [undefined, "no_email"], ["other@example.com", "email_mismatch"]
+  ])("X7 LLC registration rejects %s with %s before recording", async (createdEmail, code) => {
+    const { client, from, query } = db();
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await recordLlcRegistrationAgreement(client, "llc-profile", createdEmail, "invite@example.com"))
+      .toEqual({ ok: false, code });
+    expect(query.upsert).not.toHaveBeenCalled(); expect(from).not.toHaveBeenCalled();
+    log.mockRestore();
+  });
+  it("X7 LLC case-insensitive identity match reaches the real recorder exactly once", async () => {
+    const { client, from, query } = db();
+    expect(await recordLlcRegistrationAgreement(client, "llc-profile", "INVITE@EXAMPLE.COM", "invite@example.com"))
+      .toEqual({ ok: true });
+    expect(from.mock.calls).toEqual([["profiles"], ["legal_acceptances"]]);
+    expect(query.select.mock.calls).toEqual([["role"]]);
+    expect(query.eq.mock.calls).toEqual([["id", "llc-profile"]]);
+    expect(query.upsert.mock.calls).toEqual([[{
+      profile_id: "llc-profile", terms_version: "2026-10-30", privacy_version: "2026-10-30",
+      terms_sha256: LEGAL_DOCUMENTS.terms.versions["2026-10-30"],
+      privacy_sha256: LEGAL_DOCUMENTS.privacy.versions["2026-10-30"], source: "llc_invite",
+      role_at_acceptance: "manager", client: "web", email_hmac_key_version: 1, app_commit: "abcdef0",
+      email_hmac: createHmac("sha256", "test-key").update("invite@example.com").digest("hex")
+    }, { onConflict: "profile_id,terms_version,privacy_version", ignoreDuplicates: true }]]);
   });
   it("S9 client is user-agent-reported", async () => {
     expect(await agreementClient()).toEqual("web"); mocks.native.mockResolvedValue(true);

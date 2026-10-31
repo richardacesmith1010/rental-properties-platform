@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { legalDocumentText } from "@/lib/legal-text";
 import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -11,7 +13,7 @@ vi.mock("@/components/marketing/landing-shell", () => ({
 afterEach(cleanup);
 
 
-const forbidden = ["March 4", "[", "LAWYER", "DECISION", "billed"];
+const forbidden = ["March 4", "[", "DECISION", "billed"];
 
 function expectSentence(sentence: string) {
   expect(screen.getByText((_, element) =>
@@ -24,10 +26,19 @@ function expectHeaderAndCopy(headings: string[]) {
   expect(screen.getByText("Last updated: October 30, 2026")).toBeInTheDocument();
   expect(screen.getByText(/in effect now\. We will tell you before we change/)).toBeInTheDocument();
   expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual(headings);
+  expect(document.body.textContent).not.toMatch(/lawyer/i);
+  expect(document.body.textContent).not.toMatch(/early access version/i);
   for (const text of forbidden) expect(document.body.textContent).not.toContain(text);
 }
 
 describe("early-access legal pages", () => {
+  it.each([["terms", TermsPage], ["privacy", PrivacyPage]] as const)("V4 %s rendered page text equals the archive", (name, Page) => {
+    const { container } = render(<Page />);
+    const section = container.querySelector("main section")!;
+    expect(legalDocumentText(<div dangerouslySetInnerHTML={{ __html: section.parentElement!.outerHTML }} />))
+      .toEqual(readFileSync(`legal-archive/${name}/2026-10-30.txt`, "utf8"));
+    expect(container.textContent).not.toMatch(/lawyer/i); expect(container.textContent).not.toMatch(/early access version/i);
+  });
   it("uses theme colors, never white", () => {
     for (const Page of [TermsPage, PrivacyPage]) {
       const { container, unmount } = render(<Page />);

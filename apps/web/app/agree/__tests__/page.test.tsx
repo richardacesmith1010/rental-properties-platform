@@ -18,7 +18,7 @@ vi.mock("@/lib/invitations", () => ({ getTenantInviteOnboardingContext: m.invite
 import AgreePage from "../page";
 import CompleteProfilePage from "@/app/complete-profile/page";
 import { DeclineOptions } from "@/components/legal/decline-options";
-const current = { profile_id: "p", terms_version: "2026-10-30", privacy_version: "2026-10-30" };
+const current = { role_at_acceptance: "tenant", profile_id: "p", terms_version: "2026-10-30", privacy_version: "2026-10-30" };
 beforeEach(() => {
   vi.clearAllMocks(); m.user.mockResolvedValue({ id: "p", email: "person@example.com" }); m.role.mockResolvedValue("tenant");
   m.rows.mockResolvedValue({ data: [], error: null });
@@ -41,7 +41,8 @@ describe("agreement page and declines", () => {
     expect(screen.getByText("Please read the new Terms and Privacy Policy. Then check the box to keep using Domus.")).toBeInTheDocument();
     expect(screen.queryByText("Our Terms do not change your lease.")).toBeNull();
   });
-  it("P4 current acceptance redirects through onboarding state", async () => {
+  it("P4,G9 current acceptance survives a tenant-to-owner role change and redirects through onboarding state", async () => {
+    m.role.mockResolvedValue("owner");
     m.rows.mockResolvedValue({ data: [current], error: null });
     await expect(AgreePage({ searchParams: Promise.resolve({}) })).rejects.toThrow("REDIRECT:/complete-profile");
   });

@@ -2418,3 +2418,31 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
 - **Rewrite sprint must:** give notice to older accounts, keep receipts/lease/export/autopay-off/landlord contact
   reachable without agreeing, add the 18+ rule, name Ingle Homes LLC (with the Stripe switch), tenant carve-outs,
   record retention in the Privacy Policy, Apple 1.2 content rules and 5.1.1(i) items.
+
+## 2026-10-30 (evening, owner at dinner) — 259a built and verified, ready to deploy; 259b database fix live
+- **259a code:** Codex `gpt-6.1-sol` · high, 1 attempt (`4ac46f8`): gate 3,525 tests. Claude review: gates on pages,
+  actions (incl. ones that bypassed `requireAuth`: tasks, partners, autopay, Connect, withdrawals) and APIs; exits
+  (delete request, agree actions, export, receipt PDFs, feedback); frozen Terms/Privacy text verified line by line
+  against 89afc37 (only date, banners, the money sentence). Independent test review: 0 missing, 10 weak → **fix 1**
+  (`gpt-6.1-sol` · high, 1 attempt): exact-copy and payload tests, checked sign-up submit, two-account cleanup guards,
+  inventory hardening, the box is marked invalid only for "Check the box to agree first." Gate 3,540.
+- **Publish migration applied** (`20261106_sprint259a_publish_legal_2026_10_30.sql`): terms d9f5bae5…, privacy
+  e698a76b… = registry = archive.
+- **Local walk (prod build, live DB, throwaway key, magic-link sign-in, testers):** new owner → /agree; empty
+  Continue → error + focus + aria-invalid; Terms sheet (label, focus to Close, back to button); owner exits; agree →
+  /onboarding; record correct (agree_page, owner, web, published hashes, key version 1); tenant line + exits; export
+  200 and gated API 403 before agreeing; sign out; sign-up form box above Create account; Back bar; dark mode and
+  375 px. Cleanup removed both testers and the record (0 left).
+- **259b database fix applied live** (`33d73ae`): clients have no access to `llc_invitations`; pending token rotated
+  (fingerprint changed; accepted row and dates unchanged); live attacker SQL passes. ChatGPT GPT-6 · High: APPROVE WITH
+  CHANGES, adopted (rev 2). Code half (drop DTO token, lift 259a hold, join-flow audit tests) runs after 259a ships.
+- **Pennsylvania rules re-checked** against official texts (`5e6d641`): 6 rows confirmed, 2 corrected, 5 rules added.
+- **Blocked on the owner:** `LEGAL_RECORD_HMAC_KEY` (the permission system refused Claude writing it). Command:
+  `KEY=$(openssl rand -hex 32) && printf '%s' "$KEY" | npx vercel env add LEGAL_RECORD_HMAC_KEY production &&
+  printf '\nLEGAL_RECORD_HMAC_KEY=%s\n' "$KEY" >> apps/web/.env.local && unset KEY` (repo root).
+- **Release steps once the key exists:** push → deploy → smoke → `agreement-e2e-accounts.mjs create` → E2E phase
+  `signup` → `confirm-signup` → E2E phase `after-confirm` → `check` (expect owner 1 agree_page, signup 1 sign_up,
+  tenant 0) → `cleanup` → iPhone walk → archive screenshots (`docs/legal/consent-screens/2026-10-30/`) → rules map
+  "Contract formation" OK for new accounts → rescore → 259b code.
+- **Notes for the Terms rewrite:** `/payments/receipt/[chargeId]` is now gated (fine while only new accounts are);
+  make it an exit before older accounts are asked. ChatGPT's picker restored to 5.6 Medium both times.

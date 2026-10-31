@@ -12,22 +12,38 @@ function fixture() {
 describe("agreement account guards", () => {
   it("AS1 cleanup refuses a project mismatch before loading or deleting anything", async () => {
     const { manifest } = fixture(); const load = vi.fn(), deleteAuth = vi.fn(), deleteProfile = vi.fn();
-    expect(() => assertProject("wrong", "https://expected.supabase.co")).toThrow("Project mismatch");
+    expect(() => assertProject("wrong", "https://expected.supabase.co")).toThrow(new Error("Project mismatch; nothing removed."));
     await expect(cleanupAccounts({ project: "wrong", url: "https://expected.supabase.co", manifest,
-      load, deleteAuth, deleteProfile, save: vi.fn() })).rejects.toThrow("Project mismatch");
+      load, deleteAuth, deleteProfile, save: vi.fn() })).rejects.toThrow(new Error("Project mismatch; nothing removed."));
     expect(load).not.toHaveBeenCalled(); expect(deleteAuth).not.toHaveBeenCalled(); expect(deleteProfile).not.toHaveBeenCalled();
   });
-  it("AS2 refuses a UUID outside the manifest", () => {
+  it("AS2 a well-formed UUID outside the manifest is refused exactly", () => {
     const { manifest, state } = fixture();
-    expect(() => assertManifestAccount(manifest, "other", state.authUser, state.profile)).toThrow();
+    manifest.accounts.push({ id: "22222222-2222-4222-8222-222222222222", label: "tenant", email: runEmail("run123", "tenant") });
+    expect(() => assertManifestAccount(manifest, "33333333-3333-4333-8333-333333333333", state.authUser, state.profile))
+      .toThrow(new Error("Account not in this run; nothing removed."));
   });
-  it.each(["email", "is_tester"])("AS3-AS4 cleanup deletes nothing when %s fails preflight", async (field) => {
+  it.each([
+    ["manifest", "Account not in this run; nothing removed."],
+    ["email", "Email mismatch; nothing removed."],
+    ["is_tester", "Profile is not this run's tester; nothing removed."],
+    ["project", "Project mismatch; nothing removed."]
+  ])("AS2-AS4 two-account cleanup deletes neither account when %s preflight fails", async (guard, message) => {
     const { manifest, state } = fixture();
-    Object.assign(state.profile, field === "email" ? { email: "other@example.com" } : { is_tester: false });
-    const deleteAuth = vi.fn(), deleteProfile = vi.fn();
-    await expect(cleanupAccounts({ project: "expected", url: "https://expected.supabase.co", manifest,
-      load: async () => state, deleteAuth, deleteProfile, save: vi.fn() })).rejects.toThrow();
-    expect(deleteAuth).not.toHaveBeenCalled(); expect(deleteProfile).not.toHaveBeenCalled();
+    const second = { id: "22222222-2222-4222-8222-222222222222", label: "tenant", email: runEmail("run123", "tenant") };
+    manifest.accounts.push(second);
+    const load = vi.fn(async (accountId: string) => {
+      if (accountId === id) return state;
+      // Simulate the manifest losing the second identity while its asynchronous load is in flight.
+      if (guard === "manifest") manifest.accounts.splice(1, 1);
+      return { authUser: { id: second.id, email: guard === "email" ? "other@example.com" : second.email },
+        profile: { id: second.id, email: second.email, is_tester: guard !== "is_tester" } };
+    });
+    const deleteAuth = vi.fn(), deleteProfile = vi.fn(), save = vi.fn();
+    await expect(cleanupAccounts({ project: guard === "project" ? "wrong" : "expected",
+      url: "https://expected.supabase.co", manifest, load, deleteAuth, deleteProfile, save })).rejects.toThrow(new Error(message));
+    expect(load.mock.calls).toEqual(guard === "project" ? [] : [[id], [second.id]]);
+    expect(deleteAuth).not.toHaveBeenCalled(); expect(deleteProfile).not.toHaveBeenCalled(); expect(save).not.toHaveBeenCalled();
   });
   it("AS5 interrupted cleanup resumes only remaining manifest accounts", async () => {
     const { manifest, state } = fixture();

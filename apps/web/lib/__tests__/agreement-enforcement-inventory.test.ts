@@ -12,9 +12,27 @@ export const PUBLIC_ACTION_FILES: Record<string, { reason: string; exports: stri
   "join-invite.ts": { reason: "Public token-bound join resend", exports: ["resendFromJoinLink"] },
   "plaid.ts": { reason: "Retired entry points return only a fixed error", exports: [
     "initiatePlaidLink", "completePlaidLink", "refreshPlaidBalance", "disconnectPlaid"] },
-  "feedback.ts": { reason: "Public support remains available before agreeing", exports: ["submitFeedback"] },
+  "feedback.ts": { reason: "support channel: people who won't agree can still tell us why (259a decision)", exports: ["submitFeedback"] },
   "llc-invitations.ts": { reason: "Public token-bound join; paused until 259b", exports: [
     "acceptLLCInvitation", "signInToJoinLLC", "createAccountToJoinLLC"] },
+  "account-governance-delete-support.ts": { reason: "Internal governance helpers; authenticated callers supply context", exports: [
+    "deleteGovernedAccount", "resolveAccountDeleteRequest"] },
+  "account-governance-setup.ts": { reason: "Internal governance helpers; authenticated callers supply context", exports: [
+    "revalidateOwnershipSurfaces", "normalizeName", "isOwnerAdminMembership", "loadAccountAndMembership",
+    "getPendingRenameRequest", "getPendingDeleteRequest", "updateVotesReceived", "getVoteCounts", "applyApprovedRename"] },
+  "entity-updates-support.ts": { reason: "Internal entity helpers; authenticated callers supply context", exports: [
+    "revalidateEntitySurfaces", "hasChanges", "isDateAfter", "getUnitRecord", "getLeaseRecord", "getProfileRecord",
+    "assertPropertyAccess"] },
+  "llc-invitations-support.ts": { reason: "Internal helpers for gated management and public token-bound registration", exports: [
+    "getAppUrl", "buildInviteUrl", "buildJoinRedirect", "getNickname", "buildInvitationResultMessage", "loadInviteManagementContext",
+    "revalidateLlcSurfaces", "resolveInvitationForAcceptance", "finalizeInvitationAcceptance", "recordLlcRegistrationAgreement"] },
+  "maintenance-queries.ts": { reason: "Internal photo helpers; authenticated callers supply ticket context", exports: [
+    "getMaintenancePhotoFiles", "canAccessMaintenanceTicketForPhotos", "rollbackUploadedMaintenancePhotos",
+    "insertMaintenancePhotoMetadata", "uploadPhotosForTicket"] },
+  "shared.ts": { reason: "Internal capability check; does not authorize or mutate user data", exports: ["ensureCapabilityEnabled"] },
+  "tenant-invitation-support.ts": { reason: "Internal invitation helpers; authenticated callers supply property context", exports: [
+    "normalizeOptionalString", "buildPropertyAddress", "getTenantInviteContext", "buildTenantInviteMetadata", "createTenantInviteLink",
+    "fallbackToSupabaseInvite", "buildTenantResendPayload", "deleteGeneratedInviteUser"] },
   "auth-helpers.ts": { reason: "The shared gate implementations", exports: ["requireAuth", "requireAuthForExit"] }
 };
 const EXIT_ACTIONS: Record<string, string[]> = {
@@ -92,6 +110,30 @@ function files(directory: string): string[] {
   });
 }
 function source(file: string) { return readFileSync(file, "utf8"); }
+function functionDeclarations(ast: ts.SourceFile) {
+  const declarations = new Map<string, { body: ts.ConciseBody; exported: boolean }>();
+  for (const node of ast.statements) {
+    const exported = ts.canHaveModifiers(node) &&
+      (ts.getModifiers(node)?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword) ?? false);
+    if (ts.isFunctionDeclaration(node) && node.name && node.body) {
+      declarations.set(node.name.text, { body: node.body, exported });
+    } else if (ts.isVariableStatement(node)) for (const declaration of node.declarationList.declarations) {
+      const value = declaration.initializer;
+      if (ts.isIdentifier(declaration.name) && value && (ts.isArrowFunction(value) || ts.isFunctionExpression(value))) {
+        declarations.set(declaration.name.text, { body: value.body, exported });
+      }
+    }
+  }
+  return declarations;
+}
+function callsIn(node: ts.Node) {
+  const calls: string[] = [];
+  function visit(child: ts.Node) {
+    if (ts.isCallExpression(child) && ts.isIdentifier(child.expression)) calls.push(child.expression.text);
+    ts.forEachChild(child, visit);
+  }
+  visit(node); return calls;
+}
 // Trace existing delegating actions through named helpers/imports to the real requireAuth call.
 // This also covers checkout, wipe, and notification wrappers without adding redundant authentication.
 function reachesGate(file: string, name: string, visited = new Set<string>()): boolean {
@@ -99,10 +141,9 @@ function reachesGate(file: string, name: string, visited = new Set<string>()): b
   if (visited.has(key)) return false;
   visited.add(key);
   const ast = ts.createSourceFile(file, source(file), ts.ScriptTarget.Latest, true);
-  const declarations = new Map<string, ts.FunctionDeclaration>();
+  const declarations = functionDeclarations(ast);
   const imports = new Map<string, { file: string; name: string }>();
   for (const node of ast.statements) {
-    if (ts.isFunctionDeclaration(node) && node.name) declarations.set(node.name.text, node);
     if (!ts.isImportDeclaration(node) || !ts.isStringLiteral(node.moduleSpecifier)) continue;
     const specifier = node.moduleSpecifier.text;
     const target = specifier.startsWith("@/") ? specifier.slice(2) : specifier.startsWith(".")
@@ -115,12 +156,7 @@ function reachesGate(file: string, name: string, visited = new Set<string>()): b
   }
   const declaration = declarations.get(name);
   if (!declaration?.body) return false;
-  const calls: string[] = [];
-  function visit(node: ts.Node) {
-    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) calls.push(node.expression.text);
-    ts.forEachChild(node, visit);
-  }
-  visit(declaration.body);
+  const calls = callsIn(declaration.body);
   return calls.some((call) => {
     const imported = imports.get(call);
     if (call === "requireAuth" && imported?.file.endsWith("auth-helpers.ts")) return true;
@@ -130,26 +166,37 @@ function reachesGate(file: string, name: string, visited = new Set<string>()): b
 }
 
 describe("agreement entry-point inventories", () => {
-  it("I1 every server export reaches requireAuth or a named public/exit exception", () => {
+  it("I1 discovers function and async const exports without a use-server directive", () => {
+    const ast = ts.createSourceFile("fixture.ts", `
+      export async function action() { return requireAuth("owner"); }
+      export const arrow = async () => requireAuth("tenant");
+      export const expression = async function () { return requireAuthForExit(); };
+      async function privateHelper() {}
+    `, ts.ScriptTarget.Latest, true);
+    const exports = [...functionDeclarations(ast)].filter(([, declaration]) => declaration.exported);
+    expect(exports.map(([name]) => name)).toEqual(["action", "arrow", "expression"]);
+    expect(exports.map(([, declaration]) => callsIn(declaration.body))).toEqual([
+      ["requireAuth"], ["requireAuth"], ["requireAuthForExit"]
+    ]);
+  });
+  it("I1 every action export reaches requireAuth or a named public/exit exception in every ts file", () => {
     for (const file of files("app/actions").filter((file) => file.endsWith(".ts"))) {
       const text = source(file);
-      if (!text.startsWith('"use server"')) continue;
       const filename = path.basename(file);
       const ast = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
-      for (const node of ast.statements) {
-        if (!ts.isFunctionDeclaration(node) || !node.name ||
-            !node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) continue;
-        const name = node.name.text;
+      for (const [name, declaration] of functionDeclarations(ast)) {
+        if (!declaration.exported) continue;
         if (EXIT_ACTIONS[filename]?.includes(name)) {
-          expect(node.body?.getText(ast), `${file}:${name}`).toContain("requireAuthForExit(");
+          expect(callsIn(declaration.body).filter((call) => call === "requireAuthForExit"), `${file}:${name}`)
+            .toEqual(["requireAuthForExit"]);
         } else if (PUBLIC_ACTION_FILES[filename]?.exports.includes(name)) {
-          expect(PUBLIC_ACTION_FILES[filename].reason.length).toBeGreaterThan(10);
+          const entry = PUBLIC_ACTION_FILES[filename];
+          expect(entry.reason.length).toBeGreaterThan(10);
+          if (entry.reason.startsWith("Internal")) expect(text, file).not.toMatch(/["']use server["']/);
         } else expect(reachesGate(file, name), `${file}:${name} needs an agreement gate`).toBe(true);
       }
-      if (filename !== "auth-helpers.ts") {
-        const exitCalls = [...text.matchAll(/requireAuthForExit\(/g)].length;
-        expect(exitCalls, file).toEqual(EXIT_ACTIONS[filename]?.length ?? 0);
-      }
+      const exitCalls = callsIn(ast).filter((call) => call === "requireAuthForExit").length;
+      expect(exitCalls, file).toEqual(EXIT_ACTIONS[filename]?.length ?? 0);
     }
   });
   it("I2 every API route chooses a gate, exit, cron, webhook or public classification", () => {
@@ -157,6 +204,7 @@ describe("agreement entry-point inventories", () => {
     const names = routes.map((file) => file.slice("app/api/".length, -"/route.ts".length));
     expect(names.sort()).toEqual(Object.keys(API_ROUTE_INVENTORY).sort());
     for (const [name, entry] of Object.entries(API_ROUTE_INVENTORY)) {
+      expect(["gated", "exit", "cron", "webhook", "public"], name).toContain(entry.kind);
       expect(entry.reason.length).toBeGreaterThan(5);
       const text = source(`app/api/${name}/route.ts`);
       if (entry.kind === "gated") {
@@ -171,6 +219,7 @@ describe("agreement entry-point inventories", () => {
     const names = pages.map((file) => file.slice("app/".length).replace(/\/?page\.tsx$/, ""));
     expect(names.sort()).toEqual(Object.keys(PAGE_INVENTORY).sort());
     for (const [name, entry] of Object.entries(PAGE_INVENTORY)) {
+      expect(["gated", "exit", "public"], name).toContain(entry.kind);
       const text = source(`app/${name ? `${name}/` : ""}page.tsx`);
       if (entry.kind === "gated") {
         expect(text, name).toMatch(/(?:getAuthenticatedUser|requireRole)\(/);

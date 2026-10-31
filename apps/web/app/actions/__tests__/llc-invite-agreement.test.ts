@@ -43,6 +43,7 @@ describe("LLC registration agreement with hold mocked off", () => {
   });
   it("L3 records trusted invitation identity before acceptance and redirect", async () => {
     await expect(createAccountToJoinLLC(form())).rejects.toMatchObject({ digest: expect.stringContaining("/owner?account=account") });
+    expect(m.record).toHaveBeenCalledTimes(1);
     expect(m.record.mock.calls[0][1]).toEqual({ profileId: "p", email: "invite@example.com", source: "llc_invite", client: "web" });
     expect(m.record.mock.invocationCallOrder[0]).toBeLessThan(m.finalize.mock.invocationCallOrder[0]);
   });

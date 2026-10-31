@@ -9,6 +9,7 @@ vi.mock("@/lib/auth", () => ({ getAuthState: m.state, getRoleHomePath: (role: st
 vi.mock("@/lib/native-app-server", () => ({ isNativeAppServer: async () => false }));
 vi.mock("next/navigation", () => ({ redirect: m.redirect, unstable_rethrow: m.rethrow }));
 import { agreeToTerms, recordInviteAgreement } from "../legal-acceptance";
+import { LEGAL_DOCUMENTS } from "@/lib/legal-versions";
 import { resetRateLimitState } from "@/lib/rate-limit";
 
 function form(overrides: Record<string, string> = {}) {
@@ -17,6 +18,7 @@ function form(overrides: Record<string, string> = {}) {
 }
 beforeEach(() => {
   vi.clearAllMocks(); resetRateLimitState(); vi.stubEnv("LEGAL_RECORD_HMAC_KEY", "test-key");
+  vi.stubEnv("VERCEL_GIT_COMMIT_SHA", "abcdef0");
   m.auth.mockResolvedValue({ user: { id: "p", email: "session@example.com" } });
   m.upsert.mockResolvedValue({ error: null });
   m.state.mockResolvedValue({ hasProfile: true, onboardingComplete: true, role: "owner", needsPasswordSet: false });
@@ -33,8 +35,13 @@ describe("agreement actions", () => {
   it("A3,A7,A8 saves trusted session email then preserves redirect exceptions", async () => {
     await expect(agreeToTerms(null, form())).rejects.toThrow("REDIRECT:/owner/money");
     expect(m.upsert).toHaveBeenCalledTimes(1); const payload = m.upsert.mock.calls[0][0];
-    expect(payload.source).toEqual("agree_page"); expect(payload).not.toHaveProperty("accepted_at");
-    expect(payload.email_hmac).toEqual(createHmac("sha256", "test-key").update("session@example.com").digest("hex"));
+    expect(payload).toEqual({
+      profile_id: "p", terms_version: "2026-10-30", privacy_version: "2026-10-30",
+      terms_sha256: LEGAL_DOCUMENTS.terms.versions["2026-10-30"],
+      privacy_sha256: LEGAL_DOCUMENTS.privacy.versions["2026-10-30"],
+      source: "agree_page", role_at_acceptance: "owner", client: "web", email_hmac_key_version: 1, app_commit: "abcdef0",
+      email_hmac: createHmac("sha256", "test-key").update("session@example.com").digest("hex")
+    });
     expect(m.upsert.mock.invocationCallOrder[0]).toBeLessThan(m.redirect.mock.invocationCallOrder[0]);
     expect(m.rethrow).toHaveBeenCalled();
   });

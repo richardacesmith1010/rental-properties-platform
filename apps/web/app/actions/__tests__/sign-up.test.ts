@@ -1,10 +1,12 @@
 import { createHmac } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-const m = vi.hoisted(() => ({ signUp: vi.fn(), from: vi.fn(), upsert: vi.fn(), role: vi.fn(), native: vi.fn(), headers: vi.fn() }));
+const m = vi.hoisted(() => ({ signUp: vi.fn(), from: vi.fn(), upsert: vi.fn(), role: vi.fn(), native: vi.fn(), headers: vi.fn(),
+  select: vi.fn(), eq: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: () => ({ auth: { signUp: m.signUp } }) }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ from: m.from }) }));
 vi.mock("@/lib/native-app-server", () => ({ isNativeAppServer: m.native }));
 vi.mock("next/headers", () => ({ headers: m.headers }));
+import * as legalEvidence from "@/lib/legal-acceptance";
 import { signUpAction } from "../sign-up";
 import { resetRateLimitState } from "@/lib/rate-limit";
 import { LEGAL_DOCUMENTS } from "@/lib/legal-versions";
@@ -26,7 +28,8 @@ beforeEach(() => {
   m.native.mockResolvedValue(false); m.signUp.mockResolvedValue({ data: { user: authUser() }, error: null });
   m.role.mockResolvedValue({ data: { role: "tenant" }, error: null }); m.upsert.mockResolvedValue({ error: null });
   m.from.mockImplementation((table: string) => table === "profiles"
-    ? { select: () => ({ eq: () => ({ maybeSingle: m.role }) }) } : { upsert: m.upsert });
+    ? { select: m.select } : { upsert: m.upsert });
+  m.select.mockReturnValue({ eq: m.eq }); m.eq.mockReturnValue({ maybeSingle: m.role });
 });
 describe("registration agreement", () => {
   it.each([
@@ -40,12 +43,21 @@ describe("registration agreement", () => {
     expect(m.signUp).not.toHaveBeenCalled(); expect(m.from).not.toHaveBeenCalled();
   });
   it("S3,S10,S15 exact Auth and evidence payload use the profile role and returned email", async () => {
+    const recorder = vi.spyOn(legalEvidence, "recordLegalAcceptance");
+    m.signUp.mockResolvedValue({ data: { user: authUser({ id: "returned-user", email: "PERSON@example.com" }) }, error: null });
     expect(await signUpAction(null, form())).toEqual({ success: true, email: "person@example.com" });
     expect(m.signUp.mock.calls).toEqual([[{ email: "person@example.com", password: "Password123", options: {
       emailRedirectTo: "https://domusbase.com/auth/callback?next=%2Fowner", data: { role: "owner" }
     } }]]);
+    expect(recorder.mock.calls.map(([, input]) => input)).toEqual([{
+      profileId: "returned-user", email: "PERSON@example.com", source: "sign_up", client: "web"
+    }]);
+    recorder.mockRestore();
+    expect(m.from.mock.calls).toEqual([["profiles"], ["legal_acceptances"]]);
+    expect(m.select.mock.calls).toEqual([["role"]]);
+    expect(m.eq.mock.calls).toEqual([["id", "returned-user"]]);
     expect(m.upsert.mock.calls).toEqual([[{
-      profile_id: "p", terms_version: "2026-10-30", privacy_version: "2026-10-30",
+      profile_id: "returned-user", terms_version: "2026-10-30", privacy_version: "2026-10-30",
       terms_sha256: LEGAL_DOCUMENTS.terms.versions["2026-10-30"], privacy_sha256: LEGAL_DOCUMENTS.privacy.versions["2026-10-30"],
       source: "sign_up", role_at_acceptance: "tenant", client: "web", email_hmac_key_version: 1,
       email_hmac: createHmac("sha256", "test-key").update("person@example.com").digest("hex"), app_commit: "abcdef0"
@@ -79,6 +91,7 @@ describe("registration agreement", () => {
     if (failure === "key") vi.stubEnv("LEGAL_RECORD_HMAC_KEY", "");
     else m.upsert.mockResolvedValue({ error: { code: "failure" } });
     expect(await signUpAction(null, form())).toEqual({ success: true, email: "person@example.com" });
+    if (failure === "key") expect(m.upsert).not.toHaveBeenCalled();
     expect(log.mock.calls).toEqual([["[legal] acceptance not saved", { source: "sign_up",
       code: failure === "key" ? "no_hmac_key" : "write_failed" }]]); log.mockRestore();
   });

@@ -54,7 +54,11 @@ export function CompleteProfileForm({ email, needsAgreement, recordAgreement }: 
         }
         const result = await recordAgreement({ agreed, termsVersion: LEGAL_DOCUMENTS.terms.current,
           privacyVersion: LEGAL_DOCUMENTS.privacy.current });
-        if (!result.success) { setError(result.error ?? null); return; }
+        if (!result.success) {
+          setError(result.error ?? null);
+          if (result.error === "Check the box to agree first.") document.getElementById("invite-agree")?.focus();
+          return;
+        }
       }
       const supabase = createClient();
       const { error: updateError } = await supabase.auth.updateUser({ password });
@@ -126,7 +130,8 @@ export function CompleteProfileForm({ email, needsAgreement, recordAgreement }: 
       ) : null}
 
       {needsAgreement ? <LegalAgreementCheckbox id="invite-agree" checked={agreed} onCheckedChange={setAgreed}
-        invalid={Boolean(error)} describedBy={error ? "invite-error" : undefined} /> : null}
+        invalid={error === "Check the box to agree first."}
+        describedBy={error === "Check the box to agree first." ? "invite-error" : undefined} /> : null}
       <Button type="submit" disabled={!canSubmit || loading} loading={loading} className="w-full rounded-xl"
         title={`Set a password for ${email}.`}>
         <Lock className="mr-2 h-4 w-4" />

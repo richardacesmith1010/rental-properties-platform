@@ -8,7 +8,7 @@ vi.mock("@/lib/supabase/server", () => ({ createClient: () => ({ auth: { getUser
 import { getAuthenticatedUser } from "@/lib/auth";
 import { requireAuth, requireAuthForExit } from "../auth-helpers";
 const user = { id: "p", email: "trusted@example.com", created_at: "2026-10-30T12:00:00Z" };
-const current = { profile_id: "p", terms_version: "2026-10-30", privacy_version: "2026-10-30" };
+const current = { role_at_acceptance: "tenant", profile_id: "p", terms_version: "2026-10-30", privacy_version: "2026-10-30" };
 beforeEach(() => {
   vi.clearAllMocks(); m.getUser.mockResolvedValue({ data: { user }, error: null });
   m.rows.mockResolvedValue({ data: [], error: null }); m.profile.mockResolvedValue({ data: { role: "tenant" }, error: null });
@@ -47,6 +47,7 @@ describe("agreement page and action gates", () => {
   it("G9 a role change leaves a current acceptance valid", async () => {
     m.rows.mockResolvedValue({ data: [current], error: null }); m.profile.mockResolvedValue({ data: { role: "owner" }, error: null });
     expect((await getAuthenticatedUser()).id).toEqual("p");
+    expect((await requireAuth("owner")).role).toEqual("owner");
   });
   it("G10 action gate redirects, returns accepted, and exempts old accounts", async () => {
     await expect(requireAuth("tenant")).rejects.toThrow("REDIRECT:/agree?next=%2Ftenant");

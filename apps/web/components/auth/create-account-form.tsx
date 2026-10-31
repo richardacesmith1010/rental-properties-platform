@@ -40,7 +40,10 @@ export function CreateAccountForm({ initialRole, action }: { initialRole?: strin
   const canSubmit = passwordStrength.isValid && confirmPassword.length > 0 && password === confirmPassword;
 
   useEffect(() => {
-    if (state?.error) { setError(state.error); document.getElementById("signup-agree")?.focus(); }
+    if (state?.error) {
+      setError(state.error);
+      if (state.error === "Check the box to agree first.") document.getElementById("signup-agree")?.focus();
+    }
   }, [state]);
   function handleSignupSubmit(event: React.FormEvent<HTMLFormElement>) {
     if (!canSubmit) {
@@ -105,7 +108,8 @@ export function CreateAccountForm({ initialRole, action }: { initialRole?: strin
         {error ? <Alert id="signup-error" variant="error" role="alert">{error}</Alert> : null}
         <LegalAgreementCheckbox id="signup-agree" checked={agreed} onCheckedChange={(value) => {
           setAgreed(value); setError(null);
-        }} invalid={Boolean(error)} describedBy={error ? "signup-error" : undefined} />
+        }} invalid={error === "Check the box to agree first."}
+          describedBy={error === "Check the box to agree first." ? "signup-error" : undefined} />
         <SubmitButton disabled={!canSubmit}
           className="h-[54px] w-full rounded-xl bg-[var(--action)] text-[var(--action-contrast)] hover:bg-[var(--action-strong)]"
           title="Create your Domus account.">Create account</SubmitButton>

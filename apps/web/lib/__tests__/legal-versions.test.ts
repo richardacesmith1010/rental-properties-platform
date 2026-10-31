@@ -24,6 +24,7 @@ describe("frozen legal versions", () => {
     const element = createElement(C);
     const text = readFileSync(`legal-archive/${name}/${LEGAL_DOCUMENTS[name].current}.txt`, "utf8");
     expect(legalDocumentText(element), "Legal text changed: publish a new version").toEqual(text);
+    expect(text).not.toMatch(/lawyer/i); expect(text).not.toMatch(/early access version/i);
     const markup = renderToStaticMarkup(element);
     for (const match of markup.matchAll(/<a\b[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/g)) {
       expect(text).toContain(`<${match[1]}>`);
