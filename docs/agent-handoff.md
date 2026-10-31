@@ -2486,3 +2486,30 @@ Order: (1) owner verifies own data → (2) Alia (manager, free; also wants to us
   `handle_new_user`. Race-script bug fixed (Supabase builders send nothing until awaited). **Next:** Codex `gpt-6.1-sol` ·
   high on rev 7 (code: DTO token, hold lift, R4–R8), then review → gate → deploy → D3 smoke.
 - Transcript 24 MB.
+
+## 2026-10-31 (early) — Sprint 259b SHIPPED (PASS)
+- **Live:** `36da987` on domusbase.com (259b `da8f4eb` + fix 3). CI `gate` success on HEAD; smoke green (owner Home 726 ms,
+  Rent 808 ms, tenant Home 747 ms); no runtime errors on the deployment after the walk.
+- **What changed for people:** LLC invites work again. Invite tokens never reach the owner page's data; each invitation
+  joins one person once (a cancelled, expired, already-used or pre-resend link is refused); someone who must agree goes
+  to /agree and comes straight back joined; resend sends a fresh link; Sentry never receives invite tokens.
+- **Codex:** build `gpt-6.1-sol` · high 181,567 tokens (1 attempt); fix 1 (7 weak criteria, 13 surviving mutations)
+  `gpt-6.1-sol` · high 125,491; fix 2 (whole-tree test timeouts) `gpt-6-luna` · low 43,794; fix 3 (live bug below)
+  `gpt-6.1-sol` · medium 64,390. 6.1-sol trial 3 of 3: the build ran above the 130k–170k baseline (181k) but its review
+  findings were test strength, not wrong code; keep 6.1-sol.
+- **Claude review:** independent test review (15 covered, 7 weak) → fix 1; mutation replay 18/18 applicable killed (the one
+  survivor logs a token-free row); gate 3,633 green.
+- **D3 live walk** (magic links; Resend test addresses; the password step on a local build of the same commit): owner sent
+  4 invites, cancel and resend from the owner page, no token in the page, cancelled and pre-resend links refused, a
+  must-agree invitee → /agree → back → joined (record from the live build), an agreed invitee and the resent link joined,
+  a brand-new account joined with an `llc_invite` record; cleanup 0 left. **Found live:** /join-llc revalidated during
+  render (Next 15 error after a successful join) → fix 3 → rerun all PASS.
+- **Corrected fact (L-043):** `account_wipe_apply` deletes memberships via dynamic SQL; only `accept_llc_invitation` and
+  `handle_new_user` create or activate them.
+- **CI note:** `da8f4eb` failed CI at the Typecheck/build step after 44 s (job logs need a token); the same code built on
+  Vercel and locally, and HEAD `36da987` (differs only in the page and its test) passes CI fully. Treated as transient.
+- **Lessons:** L-042, L-043, L-044. Transcript 27 MB.
+- **Open items:** in-app iPhone walk of the Terms sheet and Back bar (needs a signed-out app session); Help bubble overlaps
+  "Create account" at 375 px (L1). **Next sprint (proposed):** the Terms rewrite — older accounts asked once with notice,
+  plus the parked items (receipt page as an exit, 18+ rule, the LLC as the company, tenant carve-outs, retention notice,
+  Apple 1.2/5.1.1(i)).
