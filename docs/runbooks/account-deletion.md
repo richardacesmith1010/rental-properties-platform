@@ -192,6 +192,7 @@ mean this person.
 |---|---|---|
 | `profiles` row | **A**: name "Deleted user", email `deleted+<id>@deleted.domusbase.invalid`, contact, photo, Stripe ids, settings cleared | C9 |
 | `auth.users` (plus identities, sessions, tokens) | **D** with the Auth admin API | C10 |
+| `legal_acceptances` (Terms agreement records, Sprint 259a) | **K**: no name, email or phone; stays linked to the anonymized profile id; the table refuses direct deletes | — |
 | `notifications` to them, `notification_preferences`, `autopay_enrollments`, `communication_logs` about them | **D** | C1 |
 | `inbox_messages.sender_email` | **A** (null); message text **S**, then **K** | C2 linked, C3 matches |
 | `invitations`, `llc_invitations` to them | **A** email → placeholder, name → "Deleted user" | C2 linked, C3 matches |
@@ -588,6 +589,7 @@ details. The lawyer has not yet set how long (the legal draft suggests 7 years).
 | Repairs, repair comments, messages | The other person's record of the home and the talk | None after C3. Their words stay, minus email, name and phone. |
 | Activity log and audit metadata | Who did what, for security | None after C3. Keys like `tenantEmail`, `managerEmail`, `ownerEmail`, `name` are scrubbed when they hold this person. |
 | Sole-owner homes | Records of the tenants and partners who used them | None after C3 and C9. |
+| Terms agreement records (`legal_acceptances`) | Proof of which Terms version the person agreed to, if a claim about their use of Domus comes later | None: versions, document hashes, role, web or iPhone, times and the deploy commit. Kept 10 years after closure, then purged with the owner's approval; a legal hold skips the purge (Sprint 259a decision; the Privacy rewrite says so). |
 
 **Signed leases are not kept by default.** Apple's rule 5.1.1(v) allows keeping only what we must keep by law. Nobody has
 confirmed yet that Domus must keep a signed lease. So a signed lease (a typed signature or a file in `lease-documents`)

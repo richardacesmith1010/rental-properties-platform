@@ -7,7 +7,7 @@ const tables = [
   "notification_deliveries", "vendors", "maintenance_assignments", "maintenance_photos",
   "ownership_accounts", "ownership_account_members", "rental_listings", "rental_applications",
   "screening_reports", "application_events", "inbox_threads", "inbox_messages",
-  "message_deliveries", "automation_templates", "automation_rules", "automation_runs"
+  "message_deliveries", "automation_templates", "automation_rules", "automation_runs", "legal_acceptances"
 ];
 const columns = [["properties", "owner_account_id"], ["invitations", "ownership_account_id"]];
 const buckets = ["lease-documents", "maintenance-photos"];
