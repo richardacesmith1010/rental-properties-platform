@@ -283,3 +283,28 @@ default ships first.
 **What happened:** At the 60 MB rotation, Claude started a linked session for Stage 1 *and* told the owner to "talk to the new session from now on". The owner opened their own new chat ("Agreement") and typed "I agree"; it read the handoff and also started Sprint 259a in the same folder. Within 15 minutes it overwrote the linked session's migration and rollback files with a different design.
 **What was correct:** Two Claude sessions sharing one checkout (and one Chrome, one Codex runner) must never drive the same sprint. The owner's own chat wins; the other hands over its findings in a new file and stops writing.
 **Rule:** When rotating, do one of two things, never both: (a) start the linked session and tell the owner "open this link to talk to it", with the link as the only call to action; or (b) don't start one, and let the owner open the new chat. Before any sprint writes, a session runs `list_sessions` and stops if another running session in the same folder has touched the same sprint.
+
+#### L-042 | 2026-10-31 | VERIFY — Unit tests can't see framework render rules; the live walk can
+**What happened:** Sprint 259b passed 3,628 tests, an independent test review and 18/18 mutation kills, but the live
+D3 walk showed every signed-in LLC join ending on an error page. `/join-llc` called a server action that runs
+`revalidatePath` during render, which Next 15 forbids. The database writes had already succeeded. Unit tests mock
+`next/cache`, so the rule never fired; the code predated 259a and its hold had hidden it.
+**Rule:** A server component never calls a server action or helper that revalidates; page tests spy on `next/cache` and
+assert zero calls during render. Every L3 flow gets a live walk before it is called shipped, and Vercel runtime logs for
+the route are read right after it.
+
+#### L-043 | 2026-10-31 | DATA — Inventory database writers by table name, not by statement shape
+**What happened:** Claude's D5 check listed the functions that write `ownership_account_members` with a regex for
+`insert into / update / delete from <table>`. It missed `account_wipe_apply`, which deletes through
+`format('delete from public.%I …')` with the table on an allowlist. The independent reviewer caught it.
+**Rule:** To find writers, search function source for the table name anywhere (allowlists, `%I`, strings), then read
+each hit. State the rule as what matters ("creates or activates memberships"), not "writes".
+
+#### L-044 | 2026-10-31 | TOOLING — Dry-run your own harness before trusting its result
+**What happened:** Three of Claude's own helpers misled it in one night: a CI wait loop whose Python one-liner could not
+parse (backslash in an f-string), so it could never succeed; a race test whose lock holder never started because
+supabase-js builders send nothing until awaited (the first run "passed" with no contention); and a mutation file whose
+Perl replacement died on `${…}`, so the mutation silently never applied.
+**Rule:** Before relying on a harness, make it fail once on purpose (or print the evidence it depends on, such as wait
+times). Start supabase-js requests with `.then()` when they must run concurrently; keep shell one-liners free of nested
+quoting; treat "NOT APPLIED" or zero-contention results as harness failures, not passes.

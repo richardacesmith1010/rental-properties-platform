@@ -3,6 +3,7 @@ import { inspect } from "node:util";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { User } from "@supabase/supabase-js";
+import { revalidatePath } from "next/cache";
 const m = vi.hoisted(() => ({ client: vi.fn(), admin: vi.fn(), auth: vi.fn(), state: vi.fn(), email: vi.fn() }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createClient: m.client }));
@@ -192,6 +193,40 @@ afterEach(() => {
   }
 });
 describe("LLC joins through real actions, agreement checks and RPC boundary", () => {
+  it.each(["strings", "non-strings"])("W1 page joins with %s metadata and redirects without revalidation", async kind => {
+    session = { ...user, user_metadata: kind === "strings"
+      ? { full_name: "Invited Person", nickname: "Guest" } : { full_name: 42, nickname: false } };
+    agreements.push({ profile_id: user.id, terms_version: "2026-10-30", privacy_version: "2026-10-30" });
+    await redirectTo(page(), joined);
+    expect(revalidatePath).not.toHaveBeenCalled();
+    expect(rpc.mock.calls).toEqual([["accept_llc_invitation", {
+      ...rpcArguments(), ...(kind === "strings" ? { p_full_name: "Invited Person", p_nickname: "Guest" } : {})
+    }]]);
+  });
+  it("W2 page redirects to agreement when the join finds a missing record without revalidation", async () => {
+    agreements.push({ profile_id: user.id, terms_version: "2026-10-30", privacy_version: "2026-10-30" });
+    rpc.mockResolvedValueOnce({ data: "agreement_required", error: null });
+    await redirectTo(page(), agreeUrl);
+    expect(revalidatePath).not.toHaveBeenCalled();
+    expect(rpc.mock.calls).toEqual([["accept_llc_invitation", rpcArguments()]]);
+    expect(memberships).toEqual([]);
+  });
+  it("W3 page shows not_active join failure without revalidation", async () => {
+    agreements.push({ profile_id: user.id, terms_version: "2026-10-30", privacy_version: "2026-10-30" });
+    race = "cancel";
+    const document = new DOMParser().parseFromString(renderToStaticMarkup(await page()), "text/html");
+    expect(document.querySelector("h1")?.textContent).toEqual("Invitation could not be accepted");
+    expect(document.querySelector("p")?.textContent).toEqual("This invitation is no longer active.");
+    expect(revalidatePath).not.toHaveBeenCalled();
+    expect(rpc.mock.calls).toEqual([["accept_llc_invitation", rpcArguments()]]);
+    expect(memberships).toEqual([]);
+  });
+  it("W4 accept action still revalidates owner and manager on success", async () => {
+    agreements.push({ profile_id: user.id, terms_version: "2026-10-30", privacy_version: "2026-10-30" });
+    expect(await acceptLLCInvitation(token)).toEqual({ success: true, accountId });
+    expect(vi.mocked(revalidatePath).mock.calls).toEqual([["/owner"], ["/manager"]]);
+    expect(rpc.mock.calls).toEqual([["accept_llc_invitation", rpcArguments()]]);
+  });
   it.each(["owner", "tenant"])("T15,T18 %s without agreement returns to the same link before joining", async (role) => {
     profiles[0].role = role;
     m.state.mockResolvedValue({ hasProfile: true, role, onboardingComplete: false, needsPasswordSet: false });

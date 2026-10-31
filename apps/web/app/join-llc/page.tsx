@@ -7,11 +7,11 @@ import { ArrowRight, Building2, ShieldCheck, Users } from "lucide-react";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import {
-  acceptLLCInvitation,
   createAccountToJoinLLC,
   signInToJoinLLC,
   signOut
 } from "@/app/actions";
+import { finalizeInvitationAcceptance } from "@/app/actions/llc-invitations-support";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -137,10 +137,17 @@ export default async function JoinLlcPage(props: JoinLlcPageProps) {
 
     if (await checkAgreement(supabase, user) === "required") redirect(buildAgreementRedirect(token));
 
-    const accepted = await acceptLLCInvitation(token);
+    const accepted = await finalizeInvitationAcceptance({
+      token,
+      profileId: user.id,
+      email: user.email,
+      fullName: typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : null,
+      nickname: typeof user.user_metadata?.nickname === "string" ? user.user_metadata.nickname : null
+    });
     if (accepted?.success && accepted.accountId) {
       redirect(`/owner?account=${encodeURIComponent(accepted.accountId)}`);
     }
+    if (!accepted.success && accepted.code === "agreement_required") redirect(buildAgreementRedirect(token));
 
     const acceptError =
       accepted && !accepted.success
